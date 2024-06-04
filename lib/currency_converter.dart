@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:forex_conversion/forex_conversion.dart';
 
 class CurrencyConverter extends StatefulWidget {
   const CurrencyConverter({super.key});
@@ -8,13 +10,44 @@ class CurrencyConverter extends StatefulWidget {
 }
 
 class _CurrencyConverterState extends State<CurrencyConverter> {
-  double result = 0;
+  double myPriceInTND = 0;
   final TextEditingController textEditingController = TextEditingController();
+  final fx = Forex();
+  double exchangeRate = 0;
+  bool showExchangeRate = false;
 
-  void convert() {
+  @override
+  void initState() {
+    super.initState();
+    textEditingController.addListener(_handleTextChanged);
+  }
+
+  void _handleTextChanged() {
     if (textEditingController.text.isNotEmpty) {
       setState(() {
-        result = double.parse(textEditingController.text) * 3.38;
+        showExchangeRate = false;
+      });
+    }
+  }
+
+  Future<void> _fetchExchangeRate() async {
+    double rate = await fx.getCurrencyConverted(
+      sourceCurrency: "EUR",
+      destinationCurrency: "TND",
+      sourceAmount: 1,
+      numberOfDecimals: 2,
+    );
+    setState(() {
+      exchangeRate = rate;
+      showExchangeRate = true;
+    });
+  }
+
+  void convert() async {
+    if (textEditingController.text.isNotEmpty) {
+      await _fetchExchangeRate();
+      setState(() {
+        myPriceInTND = double.parse(textEditingController.text) * exchangeRate;
       });
     }
   }
@@ -22,18 +55,19 @@ class _CurrencyConverterState extends State<CurrencyConverter> {
   @override
   Widget build(BuildContext context) {
     final border = OutlineInputBorder(
-        borderSide: const BorderSide(
-          width: 2.0,
-          style: BorderStyle.solid,
-        ),
-        borderRadius: BorderRadius.circular(5));
+      borderSide: const BorderSide(
+        width: 2.0,
+        style: BorderStyle.solid,
+      ),
+      borderRadius: BorderRadius.circular(5),
+    );
+
     return Scaffold(
       backgroundColor: const Color.fromARGB(255, 212, 212, 212),
       appBar: AppBar(
         title: const Text(
           'Currency Converter',
           style: TextStyle(
-            //238,238,238
             color: Color.fromARGB(255, 238, 238, 238),
             fontWeight: FontWeight.w500,
             fontSize: 27,
@@ -51,7 +85,7 @@ class _CurrencyConverterState extends State<CurrencyConverter> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              "${result.toStringAsFixed(3)} TND",
+              "${myPriceInTND.toStringAsFixed(3)} TND",
               style: const TextStyle(
                 fontSize: 45,
                 fontWeight: FontWeight.bold,
@@ -83,6 +117,9 @@ class _CurrencyConverterState extends State<CurrencyConverter> {
                   enabledBorder: border,
                 ),
                 keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
               ),
             ),
             Padding(
@@ -105,9 +142,37 @@ class _CurrencyConverterState extends State<CurrencyConverter> {
                 ),
               ),
             ),
+            if (showExchangeRate)
+              Container(
+                padding: const EdgeInsets.all(10.0),
+                margin: const EdgeInsets.only(top: 10.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: const Color.fromARGB(255, 66, 66, 66),
+                    width: 2.0,
+                  ),
+                ),
+                child: Text(
+                  "Exchange rate: 1 EUR = $exchangeRate TND",
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color.fromARGB(255, 66, 66, 66),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    textEditingController.removeListener(_handleTextChanged);
+    textEditingController.dispose();
+    super.dispose();
   }
 }
