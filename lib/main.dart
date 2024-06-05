@@ -1,4 +1,5 @@
 import 'package:currency_converter/currency_converter.dart';
+import 'package:currency_converter/splash_screen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -10,8 +11,13 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: CurrencyConverter(),
+    return MaterialApp(
+      title: 'Currency Converter',
+      initialRoute: '/',
+      routes: {
+        '/': (context) => const SplashScreen(),
+        '/home': (context) => const CurrencyConverter(),
+      },
     );
   }
 }
